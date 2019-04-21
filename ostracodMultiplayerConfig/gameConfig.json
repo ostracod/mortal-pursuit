@@ -1,0 +1,12 @@
+{
+    "pageModules": [],
+    "instructionsViewFile": "instructions.html",
+    "scripts": ["javascript/game.js"],
+    "stylesheets": ["stylesheets/game.css"],
+    "canvasWidth": 1024,
+    "canvasHeight": 768,
+    "framesPerSecond": 30,
+    "maximumPlayerCount": 15
+}
+
+

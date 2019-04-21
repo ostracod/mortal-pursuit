@@ -1,0 +1,11 @@
+{
+    "name": "mortal-pursuit",
+    "version": "0.0.0",
+    "private": false,
+    "scripts": {
+        "start": "node mortalPursuit.js"
+    },
+    "dependencies": {
+        "ostracod-multiplayer": "github:ostracod/ostracod-multiplayer"
+    }
+}
