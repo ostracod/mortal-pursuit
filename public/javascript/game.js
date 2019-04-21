@@ -1,6 +1,6 @@
 
+var pixelSize = 5;
 var spriteSize = 16;
-var spriteScale = 5;
 var spritesImageHasLoaded = false;
 var spritesImage;
 var spritesImageSize = 8;
@@ -64,10 +64,10 @@ function drawSprite(pos, which) {
         tempClipY,
         spriteSize,
         spriteSize,
-        Math.floor(pos.x) * spriteScale,
-        Math.floor(pos.y) * spriteScale,
-        spriteSize * spriteScale,
-        spriteSize * spriteScale
+        Math.floor(pos.x) * pixelSize,
+        Math.floor(pos.y) * pixelSize,
+        spriteSize * pixelSize,
+        spriteSize * pixelSize
     );
 }
 
@@ -98,6 +98,7 @@ function Player(pos, color) {
     this.velY = gravity;
     this.isOnGround = true;
     this.isDead = false;
+    this.username = "";
     playerList.push(this);
 }
 
@@ -250,7 +251,7 @@ Player.prototype.tick = function() {
     }
 }
 
-Player.prototype.draw = function() {
+Player.prototype.drawBody = function() {
     var tempSprite;
     if (this.isDead) {
         tempSprite = 32;
@@ -275,19 +276,32 @@ Player.prototype.draw = function() {
     drawSprite(this.pos, tempSprite);
 }
 
+Player.prototype.drawNameLabel = function() {
+    var tempPos = this.pos.copy();
+    tempPos.x += 8;
+    tempPos.y -= 1;
+    tempPos.x = Math.floor(tempPos.x) * pixelSize;
+    tempPos.y = Math.floor(tempPos.y) * pixelSize;
+    context.font = "bold 30px Arial";
+    context.textAlign = "center";
+    context.textBaseline = "bottom";
+    context.fillStyle = "#888888";
+    context.fillText(this.username, Math.floor(tempPos.x), Math.floor(tempPos.y));
+}
+
 function ClientDelegate() {
     
 }
 
 ClientDelegate.prototype.initialize = function() {
-    canvasPixelWidth = Math.floor(canvasWidth / spriteScale);
-    canvasPixelHeight = Math.floor(canvasHeight / spriteScale);
+    canvasPixelWidth = Math.floor(canvasWidth / pixelSize);
+    canvasPixelHeight = Math.floor(canvasHeight / pixelSize);
     localPlayer = new Player(new Pos(spriteSize * 3, spriteSize * 6 + 0.999), 0);
     initializeSpriteSheet(function() {});
 }
 
 ClientDelegate.prototype.setLocalPlayerInfo = function(command) {
-    
+    localPlayer.username = command.username;
 }
 
 ClientDelegate.prototype.addCommandsBeforeUpdateRequest = function() {
@@ -332,7 +346,13 @@ ClientDelegate.prototype.timerEvent = function() {
     var index = 0;
     while (index < playerList.length) {
         var tempPlayer = playerList[index];
-        tempPlayer.draw();
+        tempPlayer.drawBody();
+        index += 1;
+    }
+    var index = 0;
+    while (index < playerList.length) {
+        var tempPlayer = playerList[index];
+        tempPlayer.drawNameLabel();
         index += 1;
     }
     frameNumber += 1;
