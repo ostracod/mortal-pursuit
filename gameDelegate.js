@@ -33,7 +33,13 @@ function addSetRemotePlayerEntities(remotePlayerEntityList, commandList) {
         tempDataList.push({
             username: tempPlayerEntity.getUsername(),
             score: tempPlayerEntity.getScore(),
-            pos: tempPlayerEntity.pos.toJson()
+            pos: tempPlayerEntity.pos.toJson(),
+            color: tempPlayerEntity.color,
+            direction: tempPlayerEntity.direction,
+            isWalking: tempPlayerEntity.isWalking,
+            isDucking: tempPlayerEntity.isDucking,
+            velY: tempPlayerEntity.velY,
+            isDead: tempPlayerEntity.isDead
         });
         index += 1;
     }
@@ -49,6 +55,12 @@ gameUtils.addCommandListener(
     function(command, player, commandList) {
         var tempPlayerEntity = getPlayerEntityByPlayer(player);
         tempPlayerEntity.pos = createPosFromJson(command.pos);
+        tempPlayerEntity.color = command.color;
+        tempPlayerEntity.direction = command.direction;
+        tempPlayerEntity.isWalking = command.isWalking;
+        tempPlayerEntity.isDucking = command.isDucking;
+        tempPlayerEntity.velY = command.velY;
+        tempPlayerEntity.isDead = command.isDead;
     }
 );
 

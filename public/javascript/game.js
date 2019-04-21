@@ -55,7 +55,13 @@ tileSpriteMap[tileSet.GROUND] = 59;
 function addSetLocalPlayerEntityStateCommand() {
     gameUpdateCommandList.push({
         commandName: "setLocalPlayerEntityState",
-        pos: localPlayerEntity.pos.toJson()
+        pos: localPlayerEntity.pos.toJson(),
+        color: localPlayerEntity.color,
+        direction: localPlayerEntity.direction,
+        isWalking: localPlayerEntity.isWalking,
+        isDucking: localPlayerEntity.isDucking,
+        velY: localPlayerEntity.velY,
+        isDead: localPlayerEntity.isDead
     });
 }
 
@@ -70,13 +76,22 @@ addCommandListener("setRemotePlayerEntities", function(command) {
     var index = 0;
     while (index < command.playerEntityList.length) {
         var tempItem = command.playerEntityList[index];
+        var tempPos = createPosFromJson(tempItem.pos);
         var tempPlayerEntity = getPlayerEntityByUsername(tempItem.username);
         if (tempPlayerEntity === null) {
             tempPlayerEntity = new PlayerEntity();
+        } else {
+            tempPlayerEntity.drawOffset.x += tempPlayerEntity.pos.x - tempPos.x;
+            tempPlayerEntity.drawOffset.y += tempPlayerEntity.pos.y - tempPos.y;
         }
-        tempPlayerEntity.pos = createPosFromJson(tempItem.pos);
-        tempPlayerEntity.color = 0;
         tempPlayerEntity.username = tempItem.username;
+        tempPlayerEntity.pos = tempPos;
+        tempPlayerEntity.color = tempItem.color;
+        tempPlayerEntity.direction = tempItem.direction;
+        tempPlayerEntity.isWalking = tempItem.isWalking;
+        tempPlayerEntity.isDucking = tempItem.isDucking;
+        tempPlayerEntity.velY = tempItem.velY;
+        tempPlayerEntity.isDead = tempItem.isDead;
         tempNextPlayerEntityList.push(tempPlayerEntity);
         index += 1;
     }
@@ -143,6 +158,7 @@ function PlayerEntity() {
     this.isOnGround = true;
     this.isDead = false;
     this.username = "";
+    this.drawOffset = new Pos(0, 0);
 }
 
 PlayerEntity.prototype.startWalking = function(direction) {
@@ -292,6 +308,13 @@ PlayerEntity.prototype.tick = function() {
             window.location = "menu";
         }
     }
+    this.drawOffset.scale(0.7);
+}
+
+PlayerEntity.prototype.getDrawPos = function() {
+    var tempPos = this.pos.copy();
+    tempPos.add(this.drawOffset);
+    return tempPos;
 }
 
 PlayerEntity.prototype.drawBody = function() {
@@ -316,11 +339,12 @@ PlayerEntity.prototype.drawBody = function() {
         }
         tempSprite += this.color * 16;
     }
-    drawSprite(this.pos, tempSprite);
+    var tempPos = this.getDrawPos();
+    drawSprite(tempPos, tempSprite);
 }
 
 PlayerEntity.prototype.drawNameLabel = function() {
-    var tempPos = this.pos.copy();
+    var tempPos = this.getDrawPos();
     tempPos.x += 8;
     tempPos.y -= 1;
     tempPos.x = Math.floor(tempPos.x) * pixelSize;
