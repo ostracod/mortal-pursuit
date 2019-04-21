@@ -15,6 +15,7 @@ var collisionOffsetSet = [
     new Pos(1, 15),
     new Pos(14, 15),
 ];
+var gravity = 0.185;
 
 var tileData = [
     "...............",
@@ -84,11 +85,6 @@ function getTile(pos) {
     return tempLine.charCodeAt(Math.floor(pos.x / spriteSize));
 }
 
-function posHasCollision(pos) {
-    var tempTile = getTile(pos);
-    return (tempTile != tileSet.EMPTY && tempTile != tileSet.ENEMY);
-}
-
 function Player(pos, color) {
     this.pos = pos;
     this.color = color;
@@ -99,7 +95,7 @@ function Player(pos, color) {
     this.isBlinking = false;
     this.blinkDelay = 0;
     this.maximumBlinkDelay = 20;
-    this.velY = 0;
+    this.velY = gravity;
     this.isOnGround = true;
     playerList.push(this);
 }
@@ -127,6 +123,13 @@ Player.prototype.jump = function() {
         return;
     }
     localPlayer.velY = -2.5;
+}
+
+Player.prototype.setColor = function(color) {
+    if (this.color == color) {
+        return;
+    }
+    this.color = color;
 }
 
 Player.prototype.move = function(offsetX, offsetY) {
@@ -170,17 +173,28 @@ Player.prototype.move = function(offsetX, offsetY) {
                 offsetY = 0;
             }
         }
+        var tempHasCollision = false;
         var index = 0;
         while (index < collisionOffsetSet.length) {
             var tempOffset = collisionOffsetSet[index];
             tempPos.x = this.pos.x + tempOffset.x;
             tempPos.y = this.pos.y + tempOffset.y;
-            if (posHasCollision(tempPos)) {
-                this.pos.x = tempLastPosX;
-                this.pos.y = tempLastPosY;
-                return true;
+            var tempTile = getTile(tempPos);
+            if (tempTile != tileSet.EMPTY && tempTile != tileSet.ENEMY) {
+                if (tempTile == tileSet.GOAL_1) {
+                    this.setColor(0);
+                }
+                if (tempTile == tileSet.GOAL_2) {
+                    this.setColor(1);
+                }
+                tempHasCollision = true;
             }
             index += 1;
+        }
+        if (tempHasCollision) {
+            this.pos.x = tempLastPosX;
+            this.pos.y = tempLastPosY;
+            return true;
         }
     }
     return false;
@@ -201,7 +215,7 @@ Player.prototype.tick = function() {
         this.velY = 0;
     }
     this.isOnGround = tempHasTouchedGround;
-    this.velY += 0.185;
+    this.velY += gravity;
     this.isBlinking = (this.blinkDelay < 4);
     this.blinkDelay += 1;
     if (this.blinkDelay > this.maximumBlinkDelay) {
@@ -238,7 +252,7 @@ function ClientDelegate() {
 ClientDelegate.prototype.initialize = function() {
     canvasPixelWidth = Math.floor(canvasWidth / spriteScale);
     canvasPixelHeight = Math.floor(canvasHeight / spriteScale);
-    localPlayer = new Player(new Pos(spriteSize * 3, spriteSize * 6), 0);
+    localPlayer = new Player(new Pos(spriteSize * 3, spriteSize * 6 + 0.999), 0);
     initializeSpriteSheet(function() {});
 }
 
