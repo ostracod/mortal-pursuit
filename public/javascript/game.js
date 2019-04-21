@@ -7,8 +7,8 @@ var spritesImageSize = 8;
 var canvasPixelWidth;
 var canvasPixelHeight
 var frameNumber = 0;
-var playerList = [];
-var localPlayer;
+var playerEntityList = [];
+var localPlayerEntity;
 var collisionOffsetSet = [
     new Pos(1, 1),
     new Pos(14, 1),
@@ -16,6 +16,7 @@ var collisionOffsetSet = [
     new Pos(14, 15),
 ];
 var gravity = 0.185;
+var hasSetLocalPlayerInfo = false;
 
 var tileData = [
     "...............",
@@ -51,6 +52,37 @@ tileSpriteMap[tileSet.CENTER_GRASS] = 57;
 tileSpriteMap[tileSet.RIGHT_GRASS] = 58;
 tileSpriteMap[tileSet.GROUND] = 59;
 
+function addSetLocalPlayerEntityStateCommand() {
+    gameUpdateCommandList.push({
+        commandName: "setLocalPlayerEntityState",
+        pos: localPlayerEntity.pos.toJson()
+    });
+}
+
+function addGetRemotePlayerEntitiesCommand() {
+    gameUpdateCommandList.push({
+        commandName: "getRemotePlayerEntities"
+    });
+}
+
+addCommandListener("setRemotePlayerEntities", function(command) {
+    var tempNextPlayerEntityList = [localPlayerEntity];
+    var index = 0;
+    while (index < command.playerEntityList.length) {
+        var tempItem = command.playerEntityList[index];
+        var tempPlayerEntity = getPlayerEntityByUsername(tempItem.username);
+        if (tempPlayerEntity === null) {
+            tempPlayerEntity = new PlayerEntity();
+        }
+        tempPlayerEntity.pos = createPosFromJson(tempItem.pos);
+        tempPlayerEntity.color = 0;
+        tempPlayerEntity.username = tempItem.username;
+        tempNextPlayerEntityList.push(tempPlayerEntity);
+        index += 1;
+    }
+    playerEntityList = tempNextPlayerEntityList;
+});
+
 function drawSprite(pos, which) {
     if (!spritesImageHasLoaded) {
         return;
@@ -85,9 +117,21 @@ function getTile(pos) {
     return tempLine.charCodeAt(Math.floor(pos.x / spriteSize));
 }
 
-function Player(pos, color) {
-    this.pos = pos;
-    this.color = color;
+function getPlayerEntityByUsername(username) {
+    var index = 0;
+    while (index < playerEntityList.length) {
+        var tempPlayerEntity = playerEntityList[index];
+        if (tempPlayerEntity.username == username) {
+            return tempPlayerEntity;
+        }
+        index += 1;
+    }
+    return null;
+}
+
+function PlayerEntity() {
+    this.pos = null;
+    this.color = null;
     this.direction = 1;
     this.isWalking = false;
     this.isDucking = false;
@@ -99,43 +143,42 @@ function Player(pos, color) {
     this.isOnGround = true;
     this.isDead = false;
     this.username = "";
-    playerList.push(this);
 }
 
-Player.prototype.startWalking = function(direction) {
-    if ((localPlayer.direction == direction && localPlayer.isWalking)
+PlayerEntity.prototype.startWalking = function(direction) {
+    if ((this.direction == direction && this.isWalking)
             || this.isDead) {
         return;
     }
-    if (!localPlayer.isWalking) {
+    if (!this.isWalking) {
         this.walkFrameCount = 0;
     }
     this.direction = direction;
     this.isWalking = true;
 }
 
-Player.prototype.stopWalking = function(direction) {
-    if (localPlayer.direction != direction || !localPlayer.isWalking) {
+PlayerEntity.prototype.stopWalking = function(direction) {
+    if (this.direction != direction || !this.isWalking) {
         return;
     }
     this.isWalking = false;
 }
 
-Player.prototype.jump = function() {
+PlayerEntity.prototype.jump = function() {
     if (!this.isOnGround || this.isDead) {
         return;
     }
-    localPlayer.velY = -2.5;
+    this.velY = -2.5;
 }
 
-Player.prototype.setColor = function(color) {
+PlayerEntity.prototype.setColor = function(color) {
     if (this.color == color) {
         return;
     }
     this.color = color;
 }
 
-Player.prototype.die = function() {
+PlayerEntity.prototype.die = function() {
     if (this.isDead) {
         return;
     }
@@ -144,7 +187,7 @@ Player.prototype.die = function() {
     this.deathDelay = 0;
 }
 
-Player.prototype.move = function(offsetX, offsetY) {
+PlayerEntity.prototype.move = function(offsetX, offsetY) {
     var tempPos = new Pos(0, 0);
     while (Math.abs(offsetX) > 0 || Math.abs(offsetY) > 0) {
         var tempLastPosX = this.pos.x;
@@ -212,7 +255,7 @@ Player.prototype.move = function(offsetX, offsetY) {
     return false;
 }
 
-Player.prototype.tick = function() {
+PlayerEntity.prototype.tick = function() {
     if (this.isWalking && !(this.isDucking && this.isOnGround)) {
         this.move(this.direction * 1.9, 0);
         this.walkFrameCount += 1;
@@ -243,7 +286,7 @@ Player.prototype.tick = function() {
     }
     if (this.isDead) {
         this.deathDelay += 1;
-        if (this.deathDelay > 150) {
+        if (this.deathDelay > 150 && this === localPlayerEntity) {
             alert("You have died. Game over.");
             hasStopped = true;
             window.location = "menu";
@@ -251,7 +294,7 @@ Player.prototype.tick = function() {
     }
 }
 
-Player.prototype.drawBody = function() {
+PlayerEntity.prototype.drawBody = function() {
     var tempSprite;
     if (this.isDead) {
         tempSprite = 32;
@@ -276,7 +319,7 @@ Player.prototype.drawBody = function() {
     drawSprite(this.pos, tempSprite);
 }
 
-Player.prototype.drawNameLabel = function() {
+PlayerEntity.prototype.drawNameLabel = function() {
     var tempPos = this.pos.copy();
     tempPos.x += 8;
     tempPos.y -= 1;
@@ -289,6 +332,10 @@ Player.prototype.drawNameLabel = function() {
     context.fillText(this.username, Math.floor(tempPos.x), Math.floor(tempPos.y));
 }
 
+function hasInitializedGame() {
+    return (hasSetLocalPlayerInfo && spritesImageHasLoaded);
+}
+
 function ClientDelegate() {
     
 }
@@ -296,23 +343,34 @@ function ClientDelegate() {
 ClientDelegate.prototype.initialize = function() {
     canvasPixelWidth = Math.floor(canvasWidth / pixelSize);
     canvasPixelHeight = Math.floor(canvasHeight / pixelSize);
-    localPlayer = new Player(new Pos(spriteSize * 3, spriteSize * 6 + 0.999), 0);
+    localPlayerEntity = new PlayerEntity();
+    localPlayerEntity.pos = new Pos(spriteSize * 3, spriteSize * 6 + 0.999)
+    localPlayerEntity.color = 0;
+    playerEntityList.push(localPlayerEntity);
     initializeSpriteSheet(function() {});
 }
 
 ClientDelegate.prototype.setLocalPlayerInfo = function(command) {
-    localPlayer.username = command.username;
+    localPlayerEntity.username = command.username;
+    hasSetLocalPlayerInfo = true;
 }
 
 ClientDelegate.prototype.addCommandsBeforeUpdateRequest = function() {
-    
+    if (!hasInitializedGame()) {
+        return;
+    }
+    addSetLocalPlayerEntityStateCommand();
+    addGetRemotePlayerEntitiesCommand();
 }
 
 ClientDelegate.prototype.timerEvent = function() {
+    if (!hasInitializedGame()) {
+        return;
+    }
     var index = 0;
-    while (index < playerList.length) {
-        var tempPlayer = playerList[index];
-        tempPlayer.tick();
+    while (index < playerEntityList.length) {
+        var tempPlayerEntity = playerEntityList[index];
+        tempPlayerEntity.tick();
         index += 1;
     }
     clearCanvas();
@@ -344,15 +402,15 @@ ClientDelegate.prototype.timerEvent = function() {
         }
     }
     var index = 0;
-    while (index < playerList.length) {
-        var tempPlayer = playerList[index];
-        tempPlayer.drawBody();
+    while (index < playerEntityList.length) {
+        var tempPlayerEntity = playerEntityList[index];
+        tempPlayerEntity.drawBody();
         index += 1;
     }
     var index = 0;
-    while (index < playerList.length) {
-        var tempPlayer = playerList[index];
-        tempPlayer.drawNameLabel();
+    while (index < playerEntityList.length) {
+        var tempPlayerEntity = playerEntityList[index];
+        tempPlayerEntity.drawNameLabel();
         index += 1;
     }
     frameNumber += 1;
@@ -363,29 +421,29 @@ ClientDelegate.prototype.keyDownEvent = function(keyCode) {
         return true;
     }
     if (keyCode == 65 || keyCode == 37) {
-        localPlayer.startWalking(-1);
+        localPlayerEntity.startWalking(-1);
     }
     if (keyCode == 68 || keyCode == 39) {
-        localPlayer.startWalking(1);
+        localPlayerEntity.startWalking(1);
     }
     if (keyCode == 87 || keyCode == 38) {
-        localPlayer.jump();
+        localPlayerEntity.jump();
     }
     if (keyCode == 83 || keyCode == 40) {
-        localPlayer.isDucking = true;
+        localPlayerEntity.isDucking = true;
     }
     return true;
 }
 
 ClientDelegate.prototype.keyUpEvent = function(keyCode) {
     if (keyCode == 65 || keyCode == 37) {
-        localPlayer.stopWalking(-1);
+        localPlayerEntity.stopWalking(-1);
     }
     if (keyCode == 68 || keyCode == 39) {
-        localPlayer.stopWalking(1);
+        localPlayerEntity.stopWalking(1);
     }
     if (keyCode == 83 || keyCode == 40) {
-        localPlayer.isDucking = false;
+        localPlayerEntity.isDucking = false;
     }
     return true;
 }
