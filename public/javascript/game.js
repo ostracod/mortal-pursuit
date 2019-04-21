@@ -97,11 +97,13 @@ function Player(pos, color) {
     this.maximumBlinkDelay = 20;
     this.velY = gravity;
     this.isOnGround = true;
+    this.isDead = false;
     playerList.push(this);
 }
 
 Player.prototype.startWalking = function(direction) {
-    if (localPlayer.direction == direction && localPlayer.isWalking) {
+    if ((localPlayer.direction == direction && localPlayer.isWalking)
+            || this.isDead) {
         return;
     }
     if (!localPlayer.isWalking) {
@@ -119,7 +121,7 @@ Player.prototype.stopWalking = function(direction) {
 }
 
 Player.prototype.jump = function() {
-    if (!this.isOnGround) {
+    if (!this.isOnGround || this.isDead) {
         return;
     }
     localPlayer.velY = -2.5;
@@ -130,6 +132,15 @@ Player.prototype.setColor = function(color) {
         return;
     }
     this.color = color;
+}
+
+Player.prototype.die = function() {
+    if (this.isDead) {
+        return;
+    }
+    this.isDead = true;
+    this.isWalking = false;
+    this.deathDelay = 0;
 }
 
 Player.prototype.move = function(offsetX, offsetY) {
@@ -222,26 +233,45 @@ Player.prototype.tick = function() {
         this.blinkDelay = 0;
         this.maximumBlinkDelay = 80 + Math.floor(Math.random() * 200);
     }
+    var tempPos = this.pos.copy();
+    tempPos.x += 8;
+    tempPos.y += 8;
+    var tempTile = getTile(tempPos);
+    if (tempTile == tileSet.ENEMY) {
+        this.die();
+    }
+    if (this.isDead) {
+        this.deathDelay += 1;
+        if (this.deathDelay > 150) {
+            alert("You have died. Game over.");
+            hasStopped = true;
+            window.location = "menu";
+        }
+    }
 }
 
 Player.prototype.draw = function() {
     var tempSprite;
-    if (!this.isOnGround) {
-        tempSprite = 2;
-    } else if (this.isDucking) {
-        tempSprite = 3;
-    } else if (this.isWalking && this.walkFrameCount % 12 < 6) {
-        tempSprite = 1;
+    if (this.isDead) {
+        tempSprite = 32;
     } else {
-        tempSprite = 0;
+        if (!this.isOnGround) {
+            tempSprite = 2;
+        } else if (this.isDucking) {
+            tempSprite = 3;
+        } else if (this.isWalking && this.walkFrameCount % 12 < 6) {
+            tempSprite = 1;
+        } else {
+            tempSprite = 0;
+        }
+        if (this.direction < 0) {
+            tempSprite += 4;
+        }
+        if (this.isBlinking) {
+            tempSprite += 8;
+        }
+        tempSprite += this.color * 16;
     }
-    if (this.direction < 0) {
-        tempSprite += 4;
-    }
-    if (this.isBlinking) {
-        tempSprite += 8;
-    }
-    tempSprite += this.color * 16;
     drawSprite(this.pos, tempSprite);
 }
 
