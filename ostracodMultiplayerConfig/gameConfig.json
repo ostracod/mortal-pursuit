@@ -6,7 +6,7 @@
     "canvasWidth": 1200,
     "canvasHeight": 800,
     "canvasBackgroundColor": "#BFF5FF",
-    "framesPerSecond": 30,
+    "framesPerSecond": 40,
     "maximumPlayerCount": 15
 }
 
