@@ -22,13 +22,13 @@ var tileData = [
 ];
 
 var tileSpriteMap = {
-    49: 40, // Goal 1.
-    50: 41, // Goal 2.
-    35: 52, // Wall.
-    91: 48, // Left grass.
-    61: 49, // Center grass.
-    93: 50, // Right grass.
-    79: 51 // Ground.
+    49: 48, // Goal 1.
+    50: 49, // Goal 2.
+    35: 60, // Wall.
+    91: 56, // Left grass.
+    61: 57, // Center grass.
+    93: 58, // Right grass.
+    79: 59 // Ground.
 };
 
 function drawSprite(pos, which) {
@@ -92,9 +92,9 @@ ClientDelegate.prototype.timerEvent = function() {
         // Enemy.
         if (tempTile == 88) {
             if (frameNumber % 16 < 8) {
-                tempSprite = 32;
+                tempSprite = 40;
             } else {
-                tempSprite = 33;
+                tempSprite = 41;
             }
         } else if (tempTile in tileSpriteMap) {
             tempSprite = tileSpriteMap[tempTile];

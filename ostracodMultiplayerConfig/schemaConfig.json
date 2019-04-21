@@ -24,6 +24,10 @@
                 {
                     "name": "score",
                     "type": "BIGINT"
+                },
+                {
+                    "name": "isDead",
+                    "type": "BIGINT"
                 }
             ]
         }
