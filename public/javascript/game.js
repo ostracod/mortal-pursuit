@@ -9,6 +9,12 @@ var canvasPixelHeight
 var frameNumber = 0;
 var playerList = [];
 var localPlayer;
+var collisionOffsetSet = [
+    new Pos(1, 1),
+    new Pos(14, 1),
+    new Pos(1, 15),
+    new Pos(14, 15),
+];
 
 var tileData = [
     "...............",
@@ -23,15 +29,26 @@ var tileData = [
     "OOOOOOOOOOOOOOO",
 ];
 
-var tileSpriteMap = {
-    49: 48, // Goal 1.
-    50: 49, // Goal 2.
-    35: 60, // Wall.
-    91: 56, // Left grass.
-    61: 57, // Center grass.
-    93: 58, // Right grass.
-    79: 59 // Ground.
-};
+var tileSet = {
+    EMPTY: 46,
+    ENEMY: 88,
+    GOAL_1: 49,
+    GOAL_2: 50,
+    WALL: 35,
+    LEFT_GRASS: 91,
+    CENTER_GRASS: 61,
+    RIGHT_GRASS: 93,
+    GROUND: 79
+}
+
+var tileSpriteMap = {};
+tileSpriteMap[tileSet.GOAL_1] = 48;
+tileSpriteMap[tileSet.GOAL_2] = 49;
+tileSpriteMap[tileSet.WALL] = 60;
+tileSpriteMap[tileSet.LEFT_GRASS] = 56;
+tileSpriteMap[tileSet.CENTER_GRASS] = 57;
+tileSpriteMap[tileSet.RIGHT_GRASS] = 58;
+tileSpriteMap[tileSet.GROUND] = 59;
 
 function drawSprite(pos, which) {
     if (!spritesImageHasLoaded) {
@@ -46,8 +63,8 @@ function drawSprite(pos, which) {
         tempClipY,
         spriteSize,
         spriteSize,
-        Math.round(pos.x) * spriteScale,
-        Math.round(pos.y) * spriteScale,
+        Math.floor(pos.x) * spriteScale,
+        Math.floor(pos.y) * spriteScale,
         spriteSize * spriteScale,
         spriteSize * spriteScale
     );
@@ -67,6 +84,11 @@ function getTile(pos) {
     return tempLine.charCodeAt(Math.floor(pos.x / spriteSize));
 }
 
+function posHasCollision(pos) {
+    var tempTile = getTile(pos);
+    return (tempTile != tileSet.EMPTY && tempTile != tileSet.ENEMY);
+}
+
 function Player(pos, color) {
     this.pos = pos;
     this.color = color;
@@ -77,6 +99,8 @@ function Player(pos, color) {
     this.isBlinking = false;
     this.blinkDelay = 0;
     this.maximumBlinkDelay = 20;
+    this.velY = 0;
+    this.isOnGround = true;
     playerList.push(this);
 }
 
@@ -98,11 +122,86 @@ Player.prototype.stopWalking = function(direction) {
     this.isWalking = false;
 }
 
+Player.prototype.jump = function() {
+    if (!this.isOnGround) {
+        return;
+    }
+    localPlayer.velY = -2.5;
+}
+
+Player.prototype.move = function(offsetX, offsetY) {
+    var tempPos = new Pos(0, 0);
+    while (Math.abs(offsetX) > 0 || Math.abs(offsetY) > 0) {
+        var tempLastPosX = this.pos.x;
+        var tempLastPosY = this.pos.y;
+        if (offsetX > 0) {
+            if (offsetX > 1) {
+                this.pos.x += 1;
+                offsetX -= 1;
+            } else {
+                this.pos.x += offsetX;
+                offsetX = 0;
+            }
+        }
+        if (offsetX < 0) {
+            if (offsetX < -1) {
+                this.pos.x -= 1;
+                offsetX += 1;
+            } else {
+                this.pos.x += offsetX;
+                offsetX = 0;
+            }
+        }
+        if (offsetY > 0) {
+            if (offsetY > 1) {
+                this.pos.y += 1;
+                offsetY -= 1;
+            } else {
+                this.pos.y += offsetY;
+                offsetY = 0;
+            }
+        }
+        if (offsetY < 0) {
+            if (offsetY < -1) {
+                this.pos.y -= 1;
+                offsetY += 1;
+            } else {
+                this.pos.y += offsetY;
+                offsetY = 0;
+            }
+        }
+        var index = 0;
+        while (index < collisionOffsetSet.length) {
+            var tempOffset = collisionOffsetSet[index];
+            tempPos.x = this.pos.x + tempOffset.x;
+            tempPos.y = this.pos.y + tempOffset.y;
+            if (posHasCollision(tempPos)) {
+                this.pos.x = tempLastPosX;
+                this.pos.y = tempLastPosY;
+                return true;
+            }
+            index += 1;
+        }
+    }
+    return false;
+}
+
 Player.prototype.tick = function() {
-    if (this.isWalking && !this.isDucking) {
-        this.pos.x += this.direction;
+    if (this.isWalking && !(this.isDucking && this.isOnGround)) {
+        this.move(this.direction * 1.9, 0);
         this.walkFrameCount += 1;
     }
+    var tempResult = this.move(0, this.velY);
+    var tempHasTouchedGround = false;
+    if (tempResult) {
+        if (this.velY > 0) {
+            tempHasTouchedGround = true;
+            this.pos.y = Math.round(this.pos.y / spriteSize) * spriteSize + 0.999;
+        }
+        this.velY = 0;
+    }
+    this.isOnGround = tempHasTouchedGround;
+    this.velY += 0.185;
     this.isBlinking = (this.blinkDelay < 4);
     this.blinkDelay += 1;
     if (this.blinkDelay > this.maximumBlinkDelay) {
@@ -113,7 +212,9 @@ Player.prototype.tick = function() {
 
 Player.prototype.draw = function() {
     var tempSprite;
-    if (this.isDucking) {
+    if (!this.isOnGround) {
+        tempSprite = 2;
+    } else if (this.isDucking) {
         tempSprite = 3;
     } else if (this.isWalking && this.walkFrameCount % 12 < 6) {
         tempSprite = 1;
@@ -162,7 +263,7 @@ ClientDelegate.prototype.timerEvent = function() {
         var tempTile = getTile(tempPos);
         var tempSprite = null;
         // Enemy.
-        if (tempTile == 88) {
+        if (tempTile == tileSet.ENEMY) {
             if (frameNumber % 20 < 10) {
                 tempSprite = 40;
             } else {
@@ -202,6 +303,9 @@ ClientDelegate.prototype.keyDownEvent = function(keyCode) {
     }
     if (keyCode == 68 || keyCode == 39) {
         localPlayer.startWalking(1);
+    }
+    if (keyCode == 87 || keyCode == 38) {
+        localPlayer.jump();
     }
     if (keyCode == 83 || keyCode == 40) {
         localPlayer.isDucking = true;
