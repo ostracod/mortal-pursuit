@@ -52,6 +52,12 @@ tileSpriteMap[tileSet.CENTER_GRASS] = 57;
 tileSpriteMap[tileSet.RIGHT_GRASS] = 58;
 tileSpriteMap[tileSet.GROUND] = 59;
 
+function addGetInitializationInfoCommand() {
+    gameUpdateCommandList.push({
+        commandName: "getInitializationInfo"
+    });
+}
+
 function addSetLocalPlayerEntityStateCommand() {
     gameUpdateCommandList.push({
         commandName: "setLocalPlayerEntityState",
@@ -81,6 +87,18 @@ function addDieCommand() {
         commandName: "die"
     });
 }
+
+addCommandListener("setInitializationInfo", function(command) {
+    chunkSize = command.chunkSize;
+    if (command.playerIsDead) {
+        alert("You cannot play because you are dead.");
+        hasStopped = true;
+        window.location = "menu";
+        return;
+    }
+    localPlayerEntity.pos = createPosFromJson(command.playerPos);
+    localPlayerEntity.color = command.playerColor;
+});
 
 addCommandListener("setRemotePlayerEntities", function(command) {
     var tempNextPlayerEntityList = [localPlayerEntity];
@@ -157,7 +175,7 @@ function getPlayerEntityByUsername(username) {
 
 function PlayerEntity() {
     this.pos = null;
-    this.color = null;
+    this.color = 0;
     this.direction = 1;
     this.isWalking = false;
     this.isDucking = false;
@@ -204,7 +222,9 @@ PlayerEntity.prototype.setColor = function(color) {
         return;
     }
     this.color = color;
-    addIncrementScoreCommand();
+    if (this === localPlayerEntity) {
+        addIncrementScoreCommand();
+    }
 }
 
 PlayerEntity.prototype.die = function() {
@@ -297,7 +317,7 @@ PlayerEntity.prototype.tick = function() {
     if (tempResult) {
         if (this.velY > 0) {
             tempHasTouchedGround = true;
-            this.pos.y = Math.round(this.pos.y / spriteSize) * spriteSize + 0.999;
+            this.pos.y = Math.round(this.pos.y / spriteSize) * spriteSize + 0.99;
         }
         this.velY = 0;
     }
@@ -322,6 +342,7 @@ PlayerEntity.prototype.tick = function() {
             alert("You have died. Game over.");
             hasStopped = true;
             window.location = "menu";
+            return;
         }
     }
     this.drawOffset.scale(0.7);
@@ -373,7 +394,8 @@ PlayerEntity.prototype.drawNameLabel = function() {
 }
 
 function hasInitializedGame() {
-    return (hasSetLocalPlayerInfo && spritesImageHasLoaded);
+    return (hasSetLocalPlayerInfo && spritesImageHasLoaded
+        && localPlayerEntity.pos !== null);
 }
 
 function ClientDelegate() {
@@ -384,8 +406,6 @@ ClientDelegate.prototype.initialize = function() {
     canvasPixelWidth = Math.floor(canvasWidth / pixelSize);
     canvasPixelHeight = Math.floor(canvasHeight / pixelSize);
     localPlayerEntity = new PlayerEntity();
-    localPlayerEntity.pos = new Pos(spriteSize * 3, spriteSize * 6 + 0.999)
-    localPlayerEntity.color = 0;
     playerEntityList.push(localPlayerEntity);
     initializeSpriteSheet(function() {});
 }
@@ -393,6 +413,7 @@ ClientDelegate.prototype.initialize = function() {
 ClientDelegate.prototype.setLocalPlayerInfo = function(command) {
     localPlayerEntity.username = command.username;
     hasSetLocalPlayerInfo = true;
+    addGetInitializationInfoCommand();
 }
 
 ClientDelegate.prototype.addCommandsBeforeUpdateRequest = function() {

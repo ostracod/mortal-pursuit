@@ -22,7 +22,23 @@ function findPlayerEntityByPlayer(player) {
 
 function getPlayerEntityByPlayer(player) {
     var index = findPlayerEntityByPlayer(player);
+    if (index < 0) {
+        return null;
+    }
     return playerEntityList[index];
+}
+
+function addSetInitializationInfoCommand(player, commandList) {
+    var tempPlayerEntity = getPlayerEntityByPlayer(player);
+    var tempCommand = {
+        commandName: "setInitializationInfo",
+        playerIsDead: player.extraFields.isDead
+    };
+    if (tempPlayerEntity !== null) {
+        tempCommand.playerPos = tempPlayerEntity.pos.toJson();
+        tempCommand.playerColor = tempPlayerEntity.color;
+    }
+    commandList.push(tempCommand);
 }
 
 function addSetRemotePlayerEntities(remotePlayerEntityList, commandList) {
@@ -50,10 +66,21 @@ function addSetRemotePlayerEntities(remotePlayerEntityList, commandList) {
 }
 
 gameUtils.addCommandListener(
+    "getInitializationInfo",
+    true,
+    function(command, player, commandList) {
+        addSetInitializationInfoCommand(player, commandList);
+    }
+);
+
+gameUtils.addCommandListener(
     "setLocalPlayerEntityState",
     true,
     function(command, player, commandList) {
         var tempPlayerEntity = getPlayerEntityByPlayer(player);
+        if (tempPlayerEntity === null) {
+            return;
+        }
         tempPlayerEntity.pos = createPosFromJson(command.pos);
         tempPlayerEntity.color = command.color;
         tempPlayerEntity.direction = command.direction;
@@ -85,6 +112,9 @@ gameUtils.addCommandListener(
     true,
     function(command, player, commandList) {
         var tempPlayerEntity = getPlayerEntityByPlayer(player);
+        if (tempPlayerEntity === null) {
+            return;
+        }
         tempPlayerEntity.setScore(tempPlayerEntity.getScore() + 1);
     }
 );
@@ -94,6 +124,9 @@ gameUtils.addCommandListener(
     true,
     function(command, player, commandList) {
         var tempPlayerEntity = getPlayerEntityByPlayer(player);
+        if (tempPlayerEntity === null) {
+            return;
+        }
         tempPlayerEntity.setIsDead(true);
     }
 );
@@ -107,7 +140,9 @@ var gameDelegate = new GameDelegate();
 module.exports = gameDelegate;
 
 GameDelegate.prototype.playerEnterEvent = function(player) {
-    new PlayerEntity(player);
+    if (!player.extraFields.isDead) {
+        new PlayerEntity(player);
+    }
 }
 
 GameDelegate.prototype.playerLeaveEvent = function(player) {
@@ -116,7 +151,6 @@ GameDelegate.prototype.playerLeaveEvent = function(player) {
 }
 
 GameDelegate.prototype.persistEvent = function(done) {
-    
     done();
 }
 

@@ -5,7 +5,7 @@ var playerEntityList = [];
 
 function PlayerEntity(player) {
     this.player = player;
-    this.pos = new Pos(16 * 3, 16 * 5 + 0.999);
+    this.pos = new Pos(16 * 3, 16 * 6 + 0.99);
     this.color = 0;
     this.direction = 1;
     this.isWalking = false;
@@ -36,7 +36,6 @@ PlayerEntity.prototype.getIsDead = function() {
 }
 
 PlayerEntity.prototype.setIsDead = function(isDead) {
-    console.log(this.getUsername());
     this.player.extraFields.isDead = isDead;
 }
 
