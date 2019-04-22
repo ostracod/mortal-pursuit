@@ -39,7 +39,7 @@ function addSetRemotePlayerEntities(remotePlayerEntityList, commandList) {
             isWalking: tempPlayerEntity.isWalking,
             isDucking: tempPlayerEntity.isDucking,
             velY: tempPlayerEntity.velY,
-            isDead: tempPlayerEntity.isDead
+            isDead: tempPlayerEntity.getIsDead()
         });
         index += 1;
     }
@@ -60,7 +60,6 @@ gameUtils.addCommandListener(
         tempPlayerEntity.isWalking = command.isWalking;
         tempPlayerEntity.isDucking = command.isDucking;
         tempPlayerEntity.velY = command.velY;
-        tempPlayerEntity.isDead = command.isDead;
     }
 );
 
@@ -78,6 +77,24 @@ gameUtils.addCommandListener(
             index += 1;
         }
         addSetRemotePlayerEntities(tempPlayerEntityList, commandList);
+    }
+);
+
+gameUtils.addCommandListener(
+    "incrementScore",
+    true,
+    function(command, player, commandList) {
+        var tempPlayerEntity = getPlayerEntityByPlayer(player);
+        tempPlayerEntity.setScore(tempPlayerEntity.getScore() + 1);
+    }
+);
+
+gameUtils.addCommandListener(
+    "die",
+    true,
+    function(command, player, commandList) {
+        var tempPlayerEntity = getPlayerEntityByPlayer(player);
+        tempPlayerEntity.setIsDead(true);
     }
 );
 

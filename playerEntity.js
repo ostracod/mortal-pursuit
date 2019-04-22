@@ -11,7 +11,6 @@ function PlayerEntity(player) {
     this.isWalking = false;
     this.isDucking = false;
     this.velY = 0.2;
-    this.isDead = false;
     playerEntityList.push(this);
 }
 
@@ -30,6 +29,15 @@ PlayerEntity.prototype.getScore = function() {
 
 PlayerEntity.prototype.setScore = function(score) {
     this.player.score = score;
+}
+
+PlayerEntity.prototype.getIsDead = function() {
+    return this.player.extraFields.isDead;
+}
+
+PlayerEntity.prototype.setIsDead = function(isDead) {
+    console.log(this.getUsername());
+    this.player.extraFields.isDead = isDead;
 }
 
 

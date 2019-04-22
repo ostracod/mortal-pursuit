@@ -61,13 +61,24 @@ function addSetLocalPlayerEntityStateCommand() {
         isWalking: localPlayerEntity.isWalking,
         isDucking: localPlayerEntity.isDucking,
         velY: localPlayerEntity.velY,
-        isDead: localPlayerEntity.isDead
     });
 }
 
 function addGetRemotePlayerEntitiesCommand() {
     gameUpdateCommandList.push({
         commandName: "getRemotePlayerEntities"
+    });
+}
+
+function addIncrementScoreCommand() {
+    gameUpdateCommandList.push({
+        commandName: "incrementScore"
+    });
+}
+
+function addDieCommand() {
+    gameUpdateCommandList.push({
+        commandName: "die"
     });
 }
 
@@ -157,6 +168,7 @@ function PlayerEntity() {
     this.velY = gravity;
     this.isOnGround = true;
     this.isDead = false;
+    this.deathDelay = 0;
     this.username = "";
     this.drawOffset = new Pos(0, 0);
 }
@@ -192,6 +204,7 @@ PlayerEntity.prototype.setColor = function(color) {
         return;
     }
     this.color = color;
+    addIncrementScoreCommand();
 }
 
 PlayerEntity.prototype.die = function() {
@@ -201,6 +214,9 @@ PlayerEntity.prototype.die = function() {
     this.isDead = true;
     this.isWalking = false;
     this.deathDelay = 0;
+    if (this === localPlayerEntity) {
+        addDieCommand();
+    }
 }
 
 PlayerEntity.prototype.move = function(offsetX, offsetY) {
